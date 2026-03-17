@@ -36,11 +36,37 @@ class Proud_Topic extends \ProudPlugin
         ));
 
         add_action('init', array( $this, 'create_topic' ));
+        add_filter('option_siteorigin_panels_settings', array( $this, 'enable_panels_for_topic' ));
         $this->hook('admin_enqueue_scripts', 'topic_assets');
         $this->hook('wp_enqueue_scripts', 'enqueue_frontend_assets');
         $this->hook('plugins_loaded', 'topic_init_widgets');
         $this->hook('rest_api_init', 'topic_rest_support');
         $this->hook('before_delete_post', 'delete_topic_menu');
+    }
+
+    /**
+     * Ensure the proud-topic post type is included in SiteOrigin Page Builder's
+     * enabled post types, regardless of what is saved in the database settings.
+     *
+     * Filters the raw option value before SiteOrigin processes it, so the
+     * Page Builder meta box appears on proud-topic edit screens without
+     * requiring manual configuration in the SiteOrigin admin settings panel.
+     *
+     * @since 2026.03.17
+     *
+     * @filter option_siteorigin_panels_settings
+     *
+     * @param  array $settings The SiteOrigin panels settings array from the database.
+     * @return array           The settings array with proud-topic appended to post-types.
+     */
+    public function enable_panels_for_topic( $settings ) {
+        if ( ! isset( $settings['post-types'] ) ) {
+            $settings['post-types'] = array( 'page', 'post' );
+        }
+        if ( ! in_array( 'proud-topic', $settings['post-types'] ) ) {
+            $settings['post-types'][] = 'proud-topic';
+        }
+        return $settings;
     }
 
     //add assets
