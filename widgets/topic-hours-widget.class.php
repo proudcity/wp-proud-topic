@@ -2,13 +2,13 @@
 
 use Proud\Core;
 
-class AgencyHours extends Core\ProudWidget {
+class TopicHours extends Core\ProudWidget {
 
   function __construct() {
     parent::__construct(
-      'agency_hours', // Base ID
-      __( 'Agency hours', 'wp-agency' ), // Name
-      array( 'description' => __( "Display the agency's weekly hours", 'wp-agency' ), ) // Args
+      'topic_hours', // Base ID
+      __( 'Topic hours', 'wp-agency' ), // Name
+      array( 'description' => __( "Display the topic's weekly hours", 'wp-agency' ), ) // Args
     );
   }
 
@@ -26,7 +26,7 @@ class AgencyHours extends Core\ProudWidget {
   public function hasContent( $args, &$instance ) {
     return false;
     global $pageInfo;
-    $id = get_post_type() === 'agency' ? get_the_ID(): $pageInfo['parent_post'];
+    $id = get_post_type() === 'proud-topic' ? get_the_ID(): $pageInfo['parent_post'];
     // Load hours
     $instance['hours'] = get_post_meta( $id, 'hours', true );
     return !empty( $instance['hours'] );
@@ -50,7 +50,8 @@ class AgencyHours extends Core\ProudWidget {
 }
 
 // register Foo_Widget widget
-function register_agency_hours_widget() {
-  register_widget( 'AgencyHours' );
+function register_topic_hours_widget() {
+
+  register_widget( 'TopicHours' );
 }
-add_action( 'widgets_init', 'register_agency_hours_widget' );
+//add_action( 'widgets_init', 'register_topic_hours_widget' );

@@ -2,14 +2,14 @@
 
 use Proud\Core;
 
-class AgencyMenu extends Core\ProudWidget
+class TopicMenu extends Core\ProudWidget
 {
     public function __construct()
     {
         parent::__construct(
-            'agency_menu', // Base ID
-            __('Agency menu', 'wp-agency'), // Name
-            array( 'description' => __("Display an agency menu", 'wp-agency'), ) // Args
+            'topic_menu', // Base ID
+            __('Topic menu', 'wp-proud-topic'), // Name
+            array( 'description' => __("Display an agency menu", 'wp-proud-topic'), ) // Args
         );
     }
 
@@ -60,9 +60,9 @@ class AgencyMenu extends Core\ProudWidget
 }
 
 // register Foo_Widget widget
-function register_agency_menu_widget()
+function register_topic_menu_widget()
 {
-    register_widget('AgencyMenu');
+    register_widget('TopicMenu');
 }
-add_action('widgets_init', 'register_agency_menu_widget');
+add_action('widgets_init', 'register_topic_menu_widget');
 

@@ -8,8 +8,8 @@ class ProudTopicCustomContact extends Core\ProudWidget
     {
         parent::__construct(
             'custom_contact', // Base ID
-            __('Custom contact block', 'wp-agency'), // Name
-            array( 'description' => __("Display custom contact information in a sidebar", 'wp-agency'), ) // Args
+            __('Custom contact block', 'wp-proud-topic'), // Name
+            array( 'description' => __("Display custom contact information in a sidebar", 'wp-proud-topic'), ) // Args
         );
     }
 
@@ -21,18 +21,18 @@ class ProudTopicCustomContact extends Core\ProudWidget
      */
     public function initialize()
     {
-        $this->settings += Proud\Agency\AgencyContact::get_fields(false);
+        $this->settings += Proud\Topic\TopicContact::get_fields(false);
         $this->settings['social_title'] = array(
           '#type' => 'html',
           '#html' => '<h3>Social Media Networks</h3>'
         );
-        $this->settings += Proud\Agency\AgencySocial::get_fields(false);
+        $this->settings += Proud\Topic\TopicSocial::get_fields(false);
     }
 
-    // This is required by AgencySocial::set_fields()
-    public function agency_social_services()
+    // This is required by TopicSocial::set_fields()
+    public function topic_social_services()
     {
-        return Proud\Agency\agency_social_services();
+        return Proud\Topic\topic_social_services();
     }
 
 
@@ -47,7 +47,7 @@ class ProudTopicCustomContact extends Core\ProudWidget
     public function hasContent($args, &$instance)
     {
 
-        foreach (Proud\Agency\agency_social_services() as $service => $label) {
+        foreach (Proud\Topic\topic_social_services() as $service => $label) {
             if (in_array('social_'.esc_attr($service), $instance)) {
                 $url = esc_html($instance['social_'.$service]);
                 $instance['social'][$service] = $url;

@@ -60,7 +60,7 @@ class AgencySocial extends Core\ProudWidget {
 }
 
 // register Foo_Widget widget
-function register_agency_social_widget() {
+function register_topic_social_widget() {
   register_widget( 'AgencySocial' );
 }
-add_action( 'widgets_init', 'register_agency_social_widget' );
+//add_action( 'widgets_init', 'register_agency_social_widget' );

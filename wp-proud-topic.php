@@ -4,7 +4,7 @@
 Plugin Name: Proud Topic
 Plugin URI: http://proudcity.com/
 Description: Declares a Topic custom post type.
-Version: 2026.03.17.1344
+Version: 2026.03.17.1358
 Author: ProudCity
 Author URI: http://proudcity.com/
 License: Affero GPL v3
@@ -61,10 +61,12 @@ class Proud_Topic extends \ProudPlugin
     {
         if (class_exists('ProudMetaBox')) {
             require_once plugin_dir_path(__FILE__) . '/widgets/topic-contact-widget.class.php';
-            require_once plugin_dir_path(__FILE__) . '/widgets/custom-contact-widget.class.php';
-            require_once plugin_dir_path(__FILE__) . '/widgets/topic-hours-widget.class.php';
-            require_once plugin_dir_path(__FILE__) . '/widgets/topic-social-links-widget.class.php';
             require_once plugin_dir_path(__FILE__) . '/widgets/topic-menu-widget.class.php';
+
+            // @TODO these were from the Agency plugin and can probably be deleted
+            //require_once plugin_dir_path(__FILE__) . '/widgets/custom-contact-widget.class.php';
+            //require_once plugin_dir_path(__FILE__) . '/widgets/topic-hours-widget.class.php';
+            //require_once plugin_dir_path(__FILE__) . '/widgets/topic-social-links-widget.class.php';
         }
     }
 
@@ -106,7 +108,7 @@ class Proud_Topic extends \ProudPlugin
             'supports'           => array('title', 'editor', 'thumbnail', 'excerpt')
         );
 
-        register_post_type('agency', $args);
+        register_post_type('proud-topic', $args);
     }
 
     public function topic_rest_support()
