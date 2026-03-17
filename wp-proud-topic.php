@@ -1,0 +1,797 @@
+<?php
+
+/**
+Plugin Name: Proud Topic
+Plugin URI: http://proudcity.com/
+Description: Declares a Topic custom post type.
+Version: 2026.03.17.1344
+Author: ProudCity
+Author URI: http://proudcity.com/
+License: Affero GPL v3
+ **/
+// @todo: use CMB2: https://github.com/WebDevStudios/CMB2 or https://github.com/humanmade/Custom-Meta-Boxes
+
+namespace Proud\Proud_Topic;
+
+// Load Extendible
+// -----------------------
+if (! class_exists('ProudPlugin')) {
+    require_once(plugin_dir_path(__FILE__) . '../wp-proud-core/proud-plugin.class.php');
+}
+
+// We need the pagebuilder file for the default pagebuilder layout
+// @todo: Make this WORK!!
+// @todo: dont make this required, gracefully degrade
+//require_once( plugin_dir_path(__FILE__) . '../wp-proud-core/modules/so-pagebuilder/proud-so-pagebuilder.php' );
+
+class Proud_Topic extends \ProudPlugin
+{
+    public static $key = 'topic_edit';
+
+    public function __construct()
+    {
+        parent::__construct(array(
+            'textdomain'     => 'wp-proud-topic',
+            'plugin_path'    => __FILE__,
+        ));
+        $this->hook('init', 'create_topic');
+        $this->hook('admin_enqueue_scripts', 'topic_assets');
+        $this->hook('wp_enqueue_scripts', 'enqueue_frontend_assets');
+        $this->hook('plugins_loaded', 'topic_init_widgets');
+        $this->hook('rest_api_init', 'topic_rest_support');
+        $this->hook('before_delete_post', 'delete_topic_menu');
+    }
+
+    //add assets
+    public function topic_assets()
+    {
+        $path = plugins_url('assets/', __FILE__);
+        wp_enqueue_script('proud-topic/js', $path . 'js/proud-topic.js', ['proud', 'jquery'], null, true);
+    }
+
+    //add assets
+    public function enqueue_frontend_assets()
+    {
+        $path = plugins_url('assets/', __FILE__);
+        wp_enqueue_style('proud-topic/css', $path . 'css/proud-topic-styles.css', '', '1.0');
+    }
+
+    // Init on plugins loaded
+    public function topic_init_widgets()
+    {
+        if (class_exists('ProudMetaBox')) {
+            require_once plugin_dir_path(__FILE__) . '/widgets/topic-contact-widget.class.php';
+            require_once plugin_dir_path(__FILE__) . '/widgets/custom-contact-widget.class.php';
+            require_once plugin_dir_path(__FILE__) . '/widgets/topic-hours-widget.class.php';
+            require_once plugin_dir_path(__FILE__) . '/widgets/topic-social-links-widget.class.php';
+            require_once plugin_dir_path(__FILE__) . '/widgets/topic-menu-widget.class.php';
+        }
+    }
+
+    public function create_topic()
+    {
+        $labels = array(
+            'name'               => _x('Topics', 'post name', 'wp-proud-topic'),
+            'singular_name'      => _x('Topic', 'post type singular name', 'wp-proud-topic'),
+            'menu_name'          => _x('Topics', 'admin menu', 'wp-proud-topic'),
+            'name_admin_bar'     => _x('Topic', 'add new on admin bar', 'wp-proud-topic'),
+            'add_new'            => _x('Add New', 'agency', 'wp-proud-topic'),
+            'add_new_item'       => __('Add New Topic', 'wp-proud-topic'),
+            'new_item'           => __('New Topic', 'wp-proud-topic'),
+            'edit_item'          => __('Edit Topic', 'wp-proud-topic'),
+            'view_item'          => __('View Topic', 'wp-proud-topic'),
+            'all_items'          => __('All topics', 'wp-proud-topic'),
+            'search_items'       => __('Search agency', 'wp-proud-topic'),
+            'parent_item_colon'  => __('Parent agency:', 'wp-proud-topic'),
+            'not_found'          => __('No topics found.', 'wp-proud-topic'),
+            'not_found_in_trash' => __('No topics found in Trash.', 'wp-proud-topic')
+        );
+
+        $args = array(
+            'labels'             => $labels,
+            'description'        => __('Description.', 'wp-proud-topic'),
+            'public'             => true,
+            'publicly_queryable' => true,
+            'show_ui'            => true,
+            'show_in_menu'       => true,
+            'query_var'          => true,
+            'rewrite'            => array('slug' => _x('topics', 'slug', 'wp-proud-topic')),
+            'capability_type'    => 'post',
+            'has_archive'        => false,
+            'hierarchical'       => false,
+            'menu_position'      => null,
+            'show_in_rest'       => true,
+            'rest_base'          => 'topics',
+            'rest_controller_class' => 'WP_REST_Posts_Controller',
+            'supports'           => array('title', 'editor', 'thumbnail', 'excerpt')
+        );
+
+        register_post_type('agency', $args);
+    }
+
+    public function topic_rest_support()
+    {
+        register_rest_field(
+            'agency',
+            'meta',
+            array(
+                'get_callback'    => 'topic_rest_metadata',
+                'update_callback' => null,
+                'schema'          => null,
+            )
+        );
+    }
+
+    /**
+     * Delete menu when agency is deleted.
+     */
+    public function delete_topic_menu($post_id)
+    {
+        $menu = get_post_meta($post_id, 'post_menu');
+        wp_delete_nav_menu($menu);
+    }
+
+    /**
+     * Alter the REST endpoint.
+     * Add metadata to the post response
+     */
+    public function topic_rest_metadata($object, $field_name, $request)
+    {
+        $Contact = new Proud_TopicContact();
+        $return = $Contact->get_options($object['id']);
+        $Social = new Proud_TopicSocial();
+        $return['social'] = $Social->get_options($object['id']);
+        return $return;
+    }
+} // class
+$Proud_Topic = new Proud_Topic();
+
+// Proud_Topic meta box
+if (class_exists('ProudMetaBox')) {
+    class Proud_TopicSection extends \ProudMetaBox
+    {
+        public $options = [  // Meta options, key => default
+            'topic_type' => 'page',
+            'url' => '',
+            'post_menu' => 'new',
+            'topic_icon' => '',
+            'list_exclude' => ''
+        ];
+
+        public function __construct()
+        {
+            parent::__construct(
+                'topic_section', // key
+                'Topic type', // title
+                'agency', // screen
+                'normal',  // position
+                'high' // priority
+            );
+        }
+
+        /**
+         * Called on form creation
+         * @param $displaying : false if just building form, true if about to display
+         * Use displaying:true to do any difficult loading that should only occur when
+         * the form actually will display
+         */
+        public function set_fields($displaying)
+        {
+
+            // Already set
+            if ($displaying) {
+
+                // Build menu options
+                $menus = get_registered_nav_menus();
+                $menus = get_terms('nav_menu', array('hide_empty' => false));
+                global $menuArray;
+                $menuArray = array(
+                    '' => 'No menu',
+                    'new' => 'Create new menu',
+                );
+                foreach ($menus as $menu) {
+                    $menuArray[$menu->slug] = $menu->name;
+                }
+                $this->fields['post_menu']['#options'] = $menuArray;
+                return;
+            }
+
+            $this->fields = [];
+
+            $this->fields['topic_type'] = [
+                '#type' => 'radios',
+                '#title' => __('Type'),
+                '#options' => array(
+                    'page' => __('Single page', 'proud'),
+                    'external' => __('External link', 'proud'),
+                    'section' => __('Section', 'proud'),
+                ),
+            ];
+
+            $this->fields['url'] = [
+                '#type' => 'text',
+                '#title' => __('URL'),
+                '#description' => __('Enter the full URL to an existing site'),
+                '#states' => [
+                    'visible' => [
+                        'topic_type' => [
+                            'operator' => '==',
+                            'value' => ['external'],
+                            'glue' => '||'
+                        ],
+                    ],
+                ],
+            ];
+
+            $this->fields['post_menu'] = [
+                '#type' => 'select',
+                '#title' => __('Menu'),
+                '#options' => [],
+                '#states' => [
+                    'visible' => [
+                        'topic_type' => [
+                            'operator' => '==',
+                            'value' => ['section'],
+                            'glue' => '||'
+                        ],
+                    ],
+                ],
+            ];
+
+            $this->fields['topic_icon'] = [
+                '#type' => 'fa-icon',
+                '#title' => __('Icon'),
+                '#description' => __('If you are using the Icon Button list style, select an icon'),
+            ];
+
+            $this->fields['list_exclude'] = [
+                '#type' => 'checkbox',
+                '#title' => __('Exclude from ' . _x('Topic', 'post type singular name', 'wp-proud-topic') . ' Lists'),
+                '#description' => __('Checking this box will cause this ' . _x('Topic', 'post type singular name', 'wp-proud-topic') . ' to be hidden on the Government page'),
+                '#return_value' => '1',
+            ];
+        }
+
+        /**
+         * Displays the Topic Type metadata fieldset.
+         */
+        public function settings_content($post)
+        {
+            // Call parent
+            parent::settings_content($post);
+            // Add js settings
+            global $proudcore;
+            $settings = $this->get_field_names(['topic_type']);
+            $settings['isNewPost'] = empty($post->post_title);
+            $settings['topic_panels'] = [
+                'section' => topic_pagebuilder_code('section'),
+                'page' => topic_pagebuilder_code('page') // @TODO change to page + figure out how to update on click
+            ];
+            $proudcore->addJsSettings([
+                'proud_topic' => $settings
+            ]);
+        }
+
+        /**
+         * Saves form values
+         * OVERRIDEN from parent for additional processing
+         */
+        public function save_meta($post_id, $post, $update)
+        {
+            $values = $this->validate_values($post);
+            if (!empty($values['topic_type'])) {
+                $type = $values['topic_type'];
+                update_post_meta($post_id, 'topic_type', $type);
+                if ('external' === $type) {
+                    $url = $values['url'];
+                    if (empty($url)) {
+                        delete_post_meta($post_id, 'url');
+                    } else {
+                        update_post_meta($post_id, 'url', esc_url($url));
+                    }
+                } elseif ('section' === $type) {
+                    $menu = $values['post_menu'];
+                    if ('new' === $menu) {
+                        $menuId = wp_create_nav_menu($post->post_title);
+                        $objMenu = get_term_by('id', $menuId, 'nav_menu');
+                        $menu = $objMenu->slug;
+                    }
+                    if (!is_array($menu)) {
+                        update_post_meta($post_id, 'post_menu', $menu);
+                    }
+                }
+
+                update_post_meta($post_id, 'topic_icon', $values['agency_icon']);
+                update_post_meta($post_id, 'list_exclude', !empty($values['list_exclude']) ? 1 : 0);
+            }
+        }
+    }
+
+    if (is_admin()) {
+        new Proud_TopicSection();
+    }
+}
+
+// Proud_Topic contact meta box
+if (class_exists('ProudMetaBox')) {
+    class Proud_TopicContact extends \ProudMetaBox
+    {
+        public $options = [  // Meta options, key => default
+            'name' => '',
+            'name_title' => '',
+            'name_link' => '',
+            'email' => '',
+            'phone' => '',
+            'fax' => '',
+            'sms' => '',
+            'address' => '',
+            'hours' => '',
+        ];
+
+        public function __construct()
+        {
+            parent::__construct(
+                'topic_contact', // key
+                'Contact information', // title
+                'agency', // screen
+                'normal',  // position
+                'high' // priority
+            );
+        }
+
+        /**
+         * Called on form creation
+         * @param $displaying : false if just building form, true if about to display
+         * Use displaying:true to do any difficult loading that should only occur when
+         * the form actually will display
+         */
+        public function set_fields($displaying)
+        {
+
+            // Already set, no loading necessary
+            if ($displaying) {
+                return;
+            }
+
+            $this->fields = self::get_fields();
+        }
+
+        public static function get_fields()
+        {
+            $fields = [];
+
+            $fields['name'] = [
+                '#type' => 'text',
+                '#title' => __('Contact name'),
+            ];
+
+            $fields['name_title'] = [
+                '#type' => 'text',
+                '#title' => __('Contact name title'),
+                '#description' => __('This will appear directly below the Contact name.'),
+                '#states' => [
+                    'visible' => [
+                        'name' => [
+                            'operator' => '!=',
+                            'value' => [''],
+                            'glue' => '||'
+                        ],
+                    ],
+                ],
+            ];
+
+            $fields['name_link'] = [
+                '#type' => 'text',
+                '#title' => __('Contact name link'),
+                '#description' => __('If you enter a URL in this box, the Contact name above will turn into a link.'),
+                '#states' => [
+                    'visible' => [
+                        'name' => [
+                            'operator' => '!=',
+                            'value' => [''],
+                            'glue' => '||'
+                        ],
+                    ],
+                ],
+            ];
+
+            $fields['email'] = [
+                '#type' => 'text',
+                '#title' => __('Contact email or form'),
+            ];
+
+            $fields['phone'] = [
+                '#type' => 'text',
+                '#title' => __('Contact phone'),
+            ];
+
+            $fields['fax'] = [
+                '#type' => 'text',
+                '#title' => __('Contact FAX'),
+            ];
+
+            $fields['sms'] = [
+                '#type' => 'text',
+                '#title' => __('Contact SMS Number'),
+                '#description' => __('This will open in the Text Message app on mobile devices.'),
+            ];
+
+            $fields['address'] = [
+                '#type' => 'textarea',
+                '#title' => __('Contact address'),
+            ];
+
+            $fields['hours'] = [
+                '#type' => 'textarea',
+                '#title' => __('Contact hours'),
+                '#description' => __('Example:<Br/>Sunday: Closed<Br/>Monday: 9:30am - 9:00pm<Br/>Tuesday: 9:00am - 5:00pm'),
+            ];
+
+            return $fields;
+        }
+
+
+        public static function phone_tel_links($s, $prefix = 'tel')
+        {
+            $s = preg_replace('/\(?([0-9]{3})(\-| |\) ?)([0-9]{3})(\-| |\)?)([0-9]{4})/', '<a href="' . $prefix . ':($1) $3-$5" title="Call this number">($1) $3-$5</a>', $s);
+            return str_replace(',', '<br/>', $s);
+        }
+
+        public static function email_mailto_links($s)
+        {
+            $s = preg_replace('/(https?:\/\/([\d\w\.-]+\.[\w\.]{2,6})[^\s\]\[\<\>]*)/i', '<a href="$1">Contact us</a>', $s);
+            $s = preg_replace('/(\S+@\S+\.\S+)/', '<a href="mailto:$1" title="Send email">$1</a>', $s);
+            return str_replace(',', '<br/>', $s);
+        }
+    }
+
+    if (is_admin()) {
+        new Proud_TopicContact();
+    }
+}
+
+// Proud_Topic social metabox
+if (class_exists('ProudMetaBox')) {
+    class Proud_TopicSocial extends \ProudMetaBox
+    {
+        public function __construct()
+        {
+            parent::__construct(
+                'topic_social', // key
+                'Social Media Accounts', // title
+                'agency', // screen
+                'normal',  // position
+                'high' // priority
+            );
+
+            // Build options
+            foreach (topic_social_services() as $service => $label) {
+                $this->options['social_' . $service]  = '';
+            }
+        }
+
+        /**
+         * Called on form creation
+         * @param $displaying : false if just building form, true if about to display
+         * Use displaying:true to do any difficult loading that should only occur when
+         * the form actually will display
+         */
+        public function set_fields($displaying)
+        {
+            // Already set, no loading necessary
+            if ($displaying) {
+                return;
+            }
+
+            $this->fields = self::get_fields();
+        }
+
+        public static function get_fields()
+        {
+
+            $fields = [];
+
+            foreach (topic_social_services() as $service => $label) {
+                $fields['social_' . $service] = [
+                    '#type' => 'text',
+                    '#title' => __(ucfirst($service)),
+                    '#name' => 'social_' . $service,
+                ];
+            }
+            return $fields;
+        }
+    } // class
+    if (is_admin()) {
+        new Proud_TopicSocial();
+    }
+}
+
+
+/**
+ * Gets the url for the agency homepage (internal or external)
+ */
+function get_topic_permalink($post = 0)
+{
+    $post = $post > 0 ? $post : get_the_ID();
+    $url = get_post_meta($post, 'url', true);
+
+    if (get_post_meta($post, 'topic_type', true) === 'external' && !empty($url)) {
+        return esc_html($url);
+    } else {
+        return esc_url(apply_filters('the_permalink', get_permalink($post), $post));
+    }
+}
+
+/**
+ * Returns the list of social fields (also sued in agency-social-links-widget.php)
+ */
+function topic_social_services()
+{
+    return array(
+        'facebook' => 'http://facebook.com/pages/',
+        'twitter' => 'http://twitter.com/',
+        'x' => 'https://x.com',
+        'instagram' => 'http://instagram.com/',
+        'youtube' => 'http://youtube.com/',
+        'rss' => 'Enter url to RSS news feed',
+        'ical' => 'Enter url to iCal calendar feed',
+        'nextdoor' => 'Enter NextDoor URL',
+        'tiktok' => 'Enter TikTok account URL',
+        'snapchat' => 'Enter Snapchat URL',
+    );
+}
+
+/**
+ * Returns agency pagebuilder defaults
+ */
+function topic_pagebuilder_code($type)
+{
+    if ($type === 'section') {
+        $code = array(
+            'name' => __('Topic home page', 'proud'),
+            'description' => __('Topic header and sidebar with contact info', 'proud'),    // Optional
+            'widgets' =>
+            array(
+                0 =>
+                array(
+                    'text' => '<h1>[title]</h1>',
+                    'headertype' => 'header',
+                    'background' => 'image',
+                    'pattern' => '',
+                    'repeat' => 'full',
+                    'image' => '[featured-image]',
+                    'make_inverse' => 'make_inverse',
+                    'panels_info' =>
+                    array(
+                        'class' => 'JumbotronHeader',
+                        'grid' => 0,
+                        'cell' => 0,
+                        'id' => 0,
+                    ),
+                ),
+                1 =>
+                array(
+                    'title' => '',
+                    'panels_info' =>
+                    array(
+                        'class' => 'Proud_TopicMenu',
+                        'raw' => false,
+                        'grid' => 1,
+                        'cell' => 0,
+                        'id' => 1,
+                    ),
+                ),
+                2 =>
+                array(
+                    'title' => 'Connect',
+                    'panels_info' =>
+                    array(
+                        'class' => 'Proud_TopicSocial',
+                        'raw' => false,
+                        'grid' => 1,
+                        'cell' => 0,
+                        'id' => 2,
+                    ),
+                ),
+                3 =>
+                array(
+                    'title' => 'Contact',
+                    'panels_info' =>
+                    array(
+                        'class' => 'Proud_TopicContact',
+                        'raw' => false,
+                        'grid' => 1,
+                        'cell' => 0,
+                        'id' => 3,
+                    ),
+                ),
+                4 =>
+                array(
+                    'title' => 'Hours',
+                    'panels_info' =>
+                    array(
+                        'class' => 'Proud_TopicHours',
+                        'raw' => false,
+                        'grid' => 1,
+                        'cell' => 0,
+                        'id' => 4,
+                    ),
+                ),
+                5 =>
+                array(
+                    'title' => '',
+                    'text' => '',
+                    'text_selected_editor' => 'tinymce',
+                    'autop' => true,
+                    '_sow_form_id' => '56ab38067a600',
+                    'panels_info' =>
+                    array(
+                        'class' => 'SiteOrigin_Widget_Editor_Widget',
+                        'grid' => 1,
+                        'cell' => 1,
+                        'id' => 5,
+                        'style' =>
+                        array(
+                            'background_image_attachment' => false,
+                            'background_display' => 'tile',
+                        ),
+                    ),
+                ),
+            ),
+            'grids' =>
+            array(
+                0 =>
+                array(
+                    'cells' => 1,
+                    'style' =>
+                    array(
+                        'row_stretch' => 'full',
+                        'background_display' => 'tile',
+                    ),
+                ),
+                1 =>
+                array(
+                    'cells' => 2,
+                    'style' =>
+                    array(),
+                ),
+            ),
+            'grid_cells' =>
+            array(
+                0 =>
+                array(
+                    'grid' => 0,
+                    'weight' => 1,
+                ),
+                1 =>
+                array(
+                    'grid' => 1,
+                    'weight' => 0.33345145287029998,
+                ),
+                2 =>
+                array(
+                    'grid' => 1,
+                    'weight' => 0.66654854712970002,
+                ),
+            ),
+        );
+    } else {
+        $code = array(
+            'name' => __('Topic home page', 'proud'),
+            'description' => __('Topic header and sidebar with contact info', 'proud'),    // Optional
+            'widgets' =>
+            array(
+                0 =>
+                array(
+                    'text' => '<h1>[title]</h1>',
+                    'headertype' => 'header',
+                    'background' => 'image',
+                    'pattern' => '',
+                    'repeat' => 'full',
+                    'image' => '[featured-image]',
+                    'make_inverse' => 'make_inverse',
+                    'panels_info' =>
+                    array(
+                        'class' => 'JumbotronHeader',
+                        'grid' => 0,
+                        'cell' => 0,
+                        'id' => 0,
+                    ),
+                ),
+                1 =>
+                array(
+                    'title' => 'Connect',
+                    'panels_info' =>
+                    array(
+                        'class' => 'Proud_TopicSocial',
+                        'raw' => false,
+                        'grid' => 1,
+                        'cell' => 0,
+                        'id' => 2,
+                    ),
+                ),
+                2 =>
+                array(
+                    'title' => 'Contact',
+                    'panels_info' =>
+                    array(
+                        'class' => 'Proud_TopicContact',
+                        'raw' => false,
+                        'grid' => 1,
+                        'cell' => 0,
+                        'id' => 3,
+                    ),
+                ),
+                3 =>
+                array(
+                    'title' => 'Hours',
+                    'panels_info' =>
+                    array(
+                        'class' => 'Proud_TopicHours',
+                        'raw' => false,
+                        'grid' => 1,
+                        'cell' => 0,
+                        'id' => 4,
+                    ),
+                ),
+                4 =>
+                array(
+                    'title' => '',
+                    'text' => '',
+                    'text_selected_editor' => 'tinymce',
+                    'autop' => true,
+                    '_sow_form_id' => '56ab38067a600',
+                    'panels_info' =>
+                    array(
+                        'class' => 'SiteOrigin_Widget_Editor_Widget',
+                        'grid' => 1,
+                        'cell' => 1,
+                        'id' => 5,
+                        'style' =>
+                        array(
+                            'background_image_attachment' => false,
+                            'background_display' => 'tile',
+                        ),
+                    ),
+                ),
+            ),
+            'grids' =>
+            array(
+                0 =>
+                array(
+                    'cells' => 1,
+                    'style' =>
+                    array(
+                        'row_stretch' => 'full',
+                        'background_display' => 'tile',
+                    ),
+                ),
+                1 =>
+                array(
+                    'cells' => 2,
+                    'style' =>
+                    array(),
+                ),
+            ),
+            'grid_cells' =>
+            array(
+                0 =>
+                array(
+                    'grid' => 0,
+                    'weight' => 1,
+                ),
+                1 =>
+                array(
+                    'grid' => 1,
+                    'weight' => 0.33345145287029998,
+                ),
+                2 =>
+                array(
+                    'grid' => 1,
+                    'weight' => 0.66654854712970002,
+                ),
+            ),
+        );
+    }
+    return json_encode($code);
+}
