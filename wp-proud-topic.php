@@ -34,7 +34,8 @@ class Proud_Topic extends \ProudPlugin
             'textdomain'     => 'wp-proud-topic',
             'plugin_path'    => __FILE__,
         ));
-        $this->hook('init', 'create_topic');
+
+        add_action('init', array( $this, 'create_topic' ));
         $this->hook('admin_enqueue_scripts', 'topic_assets');
         $this->hook('wp_enqueue_scripts', 'enqueue_frontend_assets');
         $this->hook('plugins_loaded', 'topic_init_widgets');
@@ -102,6 +103,7 @@ class Proud_Topic extends \ProudPlugin
             'has_archive'        => false,
             'hierarchical'       => false,
             'menu_position'      => null,
+            'menu_icon'         => 'dashicons-megaphone',
             'show_in_rest'       => true,
             'rest_base'          => 'topics',
             'rest_controller_class' => 'WP_REST_Posts_Controller',
@@ -165,7 +167,7 @@ if (class_exists('ProudMetaBox')) {
             parent::__construct(
                 'topic_section', // key
                 'Topic type', // title
-                'agency', // screen
+                'proud-topic', // screen
                 'normal',  // position
                 'high' // priority
             );
