@@ -41,7 +41,6 @@ class Proud_Topic extends \ProudPlugin
         $this->hook('admin_enqueue_scripts', 'topic_assets');
         $this->hook('wp_enqueue_scripts', 'enqueue_frontend_assets');
         $this->hook('plugins_loaded', 'topic_init_widgets');
-        $this->hook('rest_api_init', 'topic_rest_support');
         $this->hook('before_delete_post', 'delete_topic_menu');
     }
 
@@ -140,19 +139,6 @@ class Proud_Topic extends \ProudPlugin
         register_post_type('proud-topic', $args);
     }
 
-    public function topic_rest_support()
-    {
-        register_rest_field(
-            'agency',
-            'meta',
-            array(
-                'get_callback'    => 'topic_rest_metadata',
-                'update_callback' => null,
-                'schema'          => null,
-            )
-        );
-    }
-
     /**
      * Delete menu when agency is deleted.
      */
@@ -162,17 +148,5 @@ class Proud_Topic extends \ProudPlugin
         wp_delete_nav_menu($menu);
     }
 
-    /**
-     * Alter the REST endpoint.
-     * Add metadata to the post response
-     */
-    public function topic_rest_metadata($object, $field_name, $request)
-    {
-        $Contact = new Proud_TopicContact();
-        $return = $Contact->get_options($object['id']);
-        $Social = new Proud_TopicSocial();
-        $return['social'] = $Social->get_options($object['id']);
-        return $return;
-    }
 } // class
 $Proud_Topic = new Proud_Topic();
