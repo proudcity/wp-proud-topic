@@ -4,7 +4,7 @@
 Plugin Name: Proud Topic
 Plugin URI: http://proudcity.com/
 Description: Declares a Topic custom post type.
-Version: 2026.03.17.1358
+Version: 2026.03.18.0912
 Author: ProudCity
 Author URI: http://proudcity.com/
 License: Affero GPL v3
@@ -42,6 +42,7 @@ class Proud_Topic extends \ProudPlugin
         $this->hook('wp_enqueue_scripts', 'enqueue_frontend_assets');
         $this->hook('plugins_loaded', 'topic_init_widgets');
         $this->hook('before_delete_post', 'delete_topic_menu');
+
     }
 
     /**
@@ -148,5 +149,19 @@ class Proud_Topic extends \ProudPlugin
         wp_delete_nav_menu($menu);
     }
 
+    /**
+     * Fired when plugin is activated
+     *
+     * @param   bool    $network_wide   TRUE if WPMU 'super admin' uses Network Activate option
+     */
+    public function activate($network_wide)
+    {
+        $this->create_topic();
+        flush_rewrite_rules();
+    } // activate
+
 } // class
 $Proud_Topic = new Proud_Topic();
+
+
+register_activation_hook(__FILE__, array( $Proud_Topic, 'activate' ));
