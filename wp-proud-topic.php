@@ -238,16 +238,12 @@ if (class_exists('ProudMetaBox')) {
         {
             // Call parent
             parent::settings_content($post);
-            // Add js settings
             global $proudcore;
-            $settings = $this->get_field_names(['topic_type']);
-            $settings['isNewPost'] = empty($post->post_title);
-            $settings['agency_panels'] = [
-                'section' => topic_pagebuilder_code('section'),
-                'page' => topic_pagebuilder_code('page') // @TODO change to page + figure out how to update on click
-            ];
             $proudcore->addJsSettings([
-                'proud_agency' => $settings
+                'proud_topic' => [
+                    'isNewPost'    => empty($post->post_title),
+                    'topic_panels' => topic_pagebuilder_code('page'),
+                ]
             ]);
         }
 
