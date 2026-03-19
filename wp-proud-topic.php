@@ -37,6 +37,7 @@ class Proud_Topic extends \ProudPlugin
         add_action('init', array( $this, 'create_topic' ));
         add_filter('option_siteorigin_panels_settings', array( $this, 'enable_panels_for_topic' ));
         add_filter('siteorigin_panels_settings', array( $this, 'load_on_attach_for_new_topic' ));
+        add_action('wp_insert_post', array( $this, 'set_default_panels_data' ), 10, 3);
 
         $this->hook('admin_enqueue_scripts', 'topic_assets');
         $this->hook('wp_enqueue_scripts', 'enqueue_frontend_assets');
@@ -68,6 +69,23 @@ class Proud_Topic extends \ProudPlugin
             $settings['post-types'][] = 'proud-topic';
         }
         return $settings;
+    }
+
+    /**
+     * Save default SiteOrigin panels layout to post meta when a new proud-topic
+     * auto-draft is created. SiteOrigin reads from post meta to populate its
+     * hidden data field in PHP, so this ensures the template is present before
+     * SiteOrigin's JS reads the field value during initialization.
+     *
+     * @action wp_insert_post
+     */
+    public function set_default_panels_data( $post_id, $post, $update ) {
+        if ( $post->post_type !== 'proud-topic' ) {
+            return;
+        }
+        if ( $post->post_status === 'auto-draft' && empty( get_post_meta( $post_id, 'panels_data', true ) ) ) {
+            update_post_meta( $post_id, 'panels_data', json_decode( topic_pagebuilder_code( 'page' ), true ) );
+        }
     }
 
     /**

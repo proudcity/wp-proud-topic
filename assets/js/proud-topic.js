@@ -1,25 +1,9 @@
 (function($, Proud) {
   Proud.behaviors.proud_topic = {
     attach: function(context, settings) {
-      var topic_settings = settings.proud_topic;
-      if (!topic_settings || !topic_settings.isNewPost) {
-        return;
-      }
-
-      function loadPanels(builderView) {
-        builderView.model.loadPanelsData(JSON.parse(topic_settings.topic_panels));
-      }
-
-      // Listen for panels_setup in case SiteOrigin initializes after us.
-      $(document).on('panels_setup', function(e, builderView) {
-        loadPanels(builderView);
-      });
-
-      // Fallback: if SiteOrigin already initialized before our behavior ran,
-      // the global soPanelsBuilderView is available immediately.
-      if (window.soPanelsBuilderView) {
-        loadPanels(window.soPanelsBuilderView);
-      }
+      // Default panels data is set via PHP (wp_insert_post hook) so SiteOrigin
+      // reads it from post meta before its JS initializes. Tab auto-switch is
+      // handled by the siteorigin_panels_settings 'load-on-attach' filter.
     }
   };
 })(jQuery, Proud);
