@@ -9,7 +9,6 @@ Author: ProudCity
 Author URI: http://proudcity.com/
 License: Affero GPL v3
  **/
-// @todo: use CMB2: https://github.com/WebDevStudios/CMB2 or https://github.com/humanmade/Custom-Meta-Boxes
 
 namespace Proud\Proud_Topic;
 
@@ -165,3 +164,311 @@ $Proud_Topic = new Proud_Topic();
 
 
 register_activation_hook(__FILE__, array( $Proud_Topic, 'activate' ));
+
+// Agency meta box
+if (class_exists('ProudMetaBox')) {
+    class TopicSection extends \ProudMetaBox
+    {
+        public $options = [  // Meta options, key => default
+            'agency_type' => 'page',
+            'url' => '',
+            'post_menu' => 'new',
+            'agency_icon' => '',
+            'list_exclude' => ''
+        ];
+
+        public function __construct()
+        {
+            parent::__construct(
+                'topic_section', // key
+                'Topic type', // title
+                'proud-topic', // screen
+                'normal',  // position
+                'high' // priority
+            );
+        }
+
+        /**
+         * Called on form creation
+         * @param $displaying : false if just building form, true if about to display
+         * Use displaying:true to do any difficult loading that should only occur when
+         * the form actually will display
+         */
+        public function set_fields($displaying)
+        {
+
+            // Already set
+            if ($displaying) {
+
+                // Build menu options
+                $menus = get_registered_nav_menus();
+                $menus = get_terms('nav_menu', array('hide_empty' => false));
+                global $menuArray;
+                $menuArray = array(
+                    '' => 'No menu',
+                    'new' => 'Create new menu',
+                );
+                foreach ($menus as $menu) {
+                    $menuArray[$menu->slug] = $menu->name;
+                }
+                $this->fields['post_menu']['#options'] = $menuArray;
+                return;
+            }
+
+            $this->fields = [];
+
+            $this->fields['post_menu'] = [
+                '#type' => 'select',
+                '#title' => __('Menu'),
+                '#options' => [],
+            ];
+
+            $this->fields['topic_icon'] = [
+                '#type' => 'fa-icon',
+                '#title' => __('Icon'),
+                '#description' => __('If you are using the Icon Button list style, select an icon'),
+            ];
+
+        }
+
+        /**
+         * Displays the Agency Type metadata fieldset.
+         */
+        public function settings_content($post)
+        {
+            // Call parent
+            parent::settings_content($post);
+            // Add js settings
+            global $proudcore;
+            $settings = $this->get_field_names(['topic_type']);
+            $settings['isNewPost'] = empty($post->post_title);
+            $settings['agency_panels'] = [
+                'section' => topic_pagebuilder_code('section'),
+                'page' => topic_pagebuilder_code('page') // @TODO change to page + figure out how to update on click
+            ];
+            $proudcore->addJsSettings([
+                'proud_agency' => $settings
+            ]);
+        }
+
+        /**
+         * Saves form values
+         * OVERRIDEN from parent for additional processing
+         */
+        public function save_meta($post_id, $post, $update)
+        {
+            $values = $this->validate_values($post);
+            if (!empty($values['topic_type'])) {
+                $type = $values['topic_type'];
+                update_post_meta($post_id, 'topic_type', $type);
+                if ('external' === $type) {
+                    $url = $values['url'];
+                    if (empty($url)) {
+                        delete_post_meta($post_id, 'url');
+                    } else {
+                        update_post_meta($post_id, 'url', esc_url($url));
+                    }
+                } elseif ('section' === $type) {
+                    $menu = $values['post_menu'];
+                    if ('new' === $menu) {
+                        $menuId = wp_create_nav_menu($post->post_title);
+                        $objMenu = get_term_by('id', $menuId, 'nav_menu');
+                        $menu = $objMenu->slug;
+                    }
+                    if (!is_array($menu)) {
+                        update_post_meta($post_id, 'post_menu', $menu);
+                    }
+                }
+
+                update_post_meta($post_id, 'topic_icon', $values['topic_icon']);
+            }
+        }
+    }
+
+    if (is_admin()) {
+        new TopicSection();
+    }
+}
+
+/**
+ * Returns agency pagebuilder defaults
+ */
+function topic_pagebuilder_code($type)
+{
+    if ($type === 'section') {
+        $code = array(
+            'name' => __('Topic home page', 'proud'),
+            'description' => __('Topic header and sidebar with contact info', 'proud'),    // Optional
+            'widgets' =>
+            array(
+                0 =>
+                array(
+                    'text' => '<h1>[title]</h1>',
+                    'headertype' => 'header',
+                    'background' => 'image',
+                    'pattern' => '',
+                    'repeat' => 'full',
+                    'image' => '[featured-image]',
+                    'make_inverse' => 'make_inverse',
+                    'panels_info' =>
+                    array(
+                        'class' => 'JumbotronHeader',
+                        'grid' => 0,
+                        'cell' => 0,
+                        'id' => 0,
+                    ),
+                ),
+                1 =>
+                array(
+                    'title' => '',
+                    'panels_info' =>
+                    array(
+                        'class' => 'TopicMenu',
+                        'raw' => false,
+                        'grid' => 1,
+                        'cell' => 0,
+                        'id' => 1,
+                    ),
+                ),
+                5 =>
+                array(
+                    'title' => '',
+                    'text' => '',
+                    'text_selected_editor' => 'tinymce',
+                    'autop' => true,
+                    '_sow_form_id' => '56ab38067a600',
+                    'panels_info' =>
+                    array(
+                        'class' => 'SiteOrigin_Widget_Editor_Widget',
+                        'grid' => 1,
+                        'cell' => 1,
+                        'id' => 5,
+                        'style' =>
+                        array(
+                            'background_image_attachment' => false,
+                            'background_display' => 'tile',
+                        ),
+                    ),
+                ),
+            ),
+            'grids' =>
+            array(
+                0 =>
+                array(
+                    'cells' => 1,
+                    'style' =>
+                    array(
+                        'row_stretch' => 'full',
+                        'background_display' => 'tile',
+                    ),
+                ),
+                1 =>
+                array(
+                    'cells' => 2,
+                    'style' =>
+                    array(),
+                ),
+            ),
+            'grid_cells' =>
+            array(
+                0 =>
+                array(
+                    'grid' => 0,
+                    'weight' => 1,
+                ),
+                1 =>
+                array(
+                    'grid' => 1,
+                    'weight' => 0.33345145287029998,
+                ),
+                2 =>
+                array(
+                    'grid' => 1,
+                    'weight' => 0.66654854712970002,
+                ),
+            ),
+        );
+    } else {
+        $code = array(
+            'name' => __('Topic home page', 'proud'),
+            'description' => __('Topic header and sidebar with contact info', 'proud'),    // Optional
+            'widgets' =>
+            array(
+                0 =>
+                array(
+                    'text' => '<h1>[title]</h1>',
+                    'headertype' => 'header',
+                    'background' => 'image',
+                    'pattern' => '',
+                    'repeat' => 'full',
+                    'image' => '[featured-image]',
+                    'make_inverse' => 'make_inverse',
+                    'panels_info' =>
+                    array(
+                        'class' => 'JumbotronHeader',
+                        'grid' => 0,
+                        'cell' => 0,
+                        'id' => 0,
+                    ),
+                ),
+                4 =>
+                array(
+                    'title' => '',
+                    'text' => '',
+                    'text_selected_editor' => 'tinymce',
+                    'autop' => true,
+                    '_sow_form_id' => '56ab38067a600',
+                    'panels_info' =>
+                    array(
+                        'class' => 'SiteOrigin_Widget_Editor_Widget',
+                        'grid' => 1,
+                        'cell' => 1,
+                        'id' => 5,
+                        'style' =>
+                        array(
+                            'background_image_attachment' => false,
+                            'background_display' => 'tile',
+                        ),
+                    ),
+                ),
+            ),
+            'grids' =>
+            array(
+                0 =>
+                array(
+                    'cells' => 1,
+                    'style' =>
+                    array(
+                        'row_stretch' => 'full',
+                        'background_display' => 'tile',
+                    ),
+                ),
+                1 =>
+                array(
+                    'cells' => 2,
+                    'style' =>
+                    array(),
+                ),
+            ),
+            'grid_cells' =>
+            array(
+                0 =>
+                array(
+                    'grid' => 0,
+                    'weight' => 1,
+                ),
+                1 =>
+                array(
+                    'grid' => 1,
+                    'weight' => 0.33345145287029998,
+                ),
+                2 =>
+                array(
+                    'grid' => 1,
+                    'weight' => 0.66654854712970002,
+                ),
+            ),
+        );
+    }
+    return json_encode($code);
+}
