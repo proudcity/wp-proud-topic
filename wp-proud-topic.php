@@ -321,10 +321,17 @@ if (class_exists('ProudMetaBox')) {
 }
 
 /**
- * Returns agency pagebuilder defaults
+ * Returns the default SiteOrigin pagebuilder layout for a topic.
+ * Reads from test-topic.json in the plugin directory.
  */
 function topic_pagebuilder_code($type)
 {
+    $json = file_get_contents( plugin_dir_path( __FILE__ ) . 'topic-template.json' );
+    if ( $json !== false ) {
+        return $json;
+    }
+
+    // Fallback if file is missing
     if ($type === 'section') {
         $code = array(
             'name' => __('Topic home page', 'proud'),
@@ -500,5 +507,5 @@ function topic_pagebuilder_code($type)
             ),
         );
     }
-    return json_encode($code);
+    return json_encode( $code );
 }
