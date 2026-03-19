@@ -6,14 +6,20 @@
         return;
       }
 
-      var builder;
+      function loadPanels(builderView) {
+        builderView.model.loadPanelsData(JSON.parse(topic_settings.topic_panels));
+      }
+
+      // Listen for panels_setup in case SiteOrigin initializes after us.
       $(document).on('panels_setup', function(e, builderView) {
-        builder = builderView;
-        $('input[name="panels_data"]').val(topic_settings.topic_panels);
-        builder.model.loadPanelsData(JSON.parse(topic_settings.topic_panels));
+        loadPanels(builderView);
       });
 
-      $('#content-panels').trigger('click');
+      // Fallback: if SiteOrigin already initialized before our behavior ran,
+      // the global soPanelsBuilderView is available immediately.
+      if (window.soPanelsBuilderView) {
+        loadPanels(window.soPanelsBuilderView);
+      }
     }
   };
 })(jQuery, Proud);

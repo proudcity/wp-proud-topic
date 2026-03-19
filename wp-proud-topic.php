@@ -36,6 +36,7 @@ class Proud_Topic extends \ProudPlugin
 
         add_action('init', array( $this, 'create_topic' ));
         add_filter('option_siteorigin_panels_settings', array( $this, 'enable_panels_for_topic' ));
+        add_filter('siteorigin_panels_settings', array( $this, 'load_on_attach_for_new_topic' ));
 
         $this->hook('admin_enqueue_scripts', 'topic_assets');
         $this->hook('wp_enqueue_scripts', 'enqueue_frontend_assets');
@@ -65,6 +66,21 @@ class Proud_Topic extends \ProudPlugin
         }
         if ( ! in_array( 'proud-topic', $settings['post-types'] ) ) {
             $settings['post-types'][] = 'proud-topic';
+        }
+        return $settings;
+    }
+
+    /**
+     * Auto-switch to the SiteOrigin Page Builder tab when creating a new topic.
+     *
+     * @filter siteorigin_panels_settings
+     */
+    public function load_on_attach_for_new_topic( $settings ) {
+        global $pagenow;
+        if ( $pagenow === 'post-new.php' &&
+             isset( $_GET['post_type'] ) &&
+             $_GET['post_type'] === 'proud-topic' ) {
+            $settings['load-on-attach'] = true;
         }
         return $settings;
     }
