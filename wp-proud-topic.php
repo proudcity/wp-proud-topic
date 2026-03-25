@@ -4,7 +4,7 @@
 Plugin Name: Proud Topic
 Plugin URI: http://proudcity.com/
 Description: Declares a Topic custom post type.
-Version: 2026.03.25.1142
+Version: 2026.03.25.1632
 Author: ProudCity
 Author URI: http://proudcity.com/
 License: Affero GPL v3
@@ -220,6 +220,31 @@ if (class_exists('ProudMetaBox')) {
                 'normal',  // position
                 'high' // priority
             );
+        }
+
+        /**
+         * Override parent: skip add_meta_box and render above the editor instead
+         */
+        public function register_box()
+        {
+            $this->set_fields(false);
+            $this->form = new \Proud\Core\FormHelper($this->key, $this->fields, 1, 'form');
+            add_action('edit_form_after_title', [$this, 'render_above_editor'], 1);
+        }
+
+        /**
+         * Renders the meta box above the TinyMCE / page builder area
+         */
+        public function render_above_editor($post)
+        {
+            if ($post->post_type !== 'proud-topic') {
+                return;
+            }
+            echo '<div class="postbox" id="topic_section_meta_box" style="margin-top:12px">';
+            echo '<h2 class="hndle"><span>' . esc_html__('Topic type', 'wp-proud-topic') . '</span></h2>';
+            echo '<div class="inside">';
+            $this->settings_content($post);
+            echo '</div></div>';
         }
 
         /**
