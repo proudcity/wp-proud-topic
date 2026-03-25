@@ -288,28 +288,23 @@ if (class_exists('ProudMetaBox')) {
         public function save_meta($post_id, $post, $update)
         {
             $values = $this->validate_values($post);
-            if (!empty($values['topic_type'])) {
-                $type = $values['topic_type'];
-                update_post_meta($post_id, 'topic_type', $type);
-                if ('external' === $type) {
-                    $url = $values['url'];
-                    if (empty($url)) {
-                        delete_post_meta($post_id, 'url');
-                    } else {
-                        update_post_meta($post_id, 'url', esc_url($url));
-                    }
-                } elseif ('section' === $type) {
-                    $menu = $values['post_menu'];
-                    if ('new' === $menu) {
-                        $menuId = wp_create_nav_menu($post->post_title);
-                        $objMenu = get_term_by('id', $menuId, 'nav_menu');
-                        $menu = $objMenu->slug;
-                    }
-                    if (!is_array($menu)) {
-                        update_post_meta($post_id, 'post_menu', $menu);
-                    }
-                }
+            if (empty($values)) {
+                return;
+            }
 
+            $menu = isset($values['post_menu']) ? $values['post_menu'] : '';
+            if ('new' === $menu) {
+                $menuId = wp_create_nav_menu($post->post_title);
+                $objMenu = get_term_by('id', $menuId, 'nav_menu');
+                $menu = $objMenu->slug;
+            }
+            if (!empty($menu) && !is_array($menu)) {
+                update_post_meta($post_id, 'post_menu', $menu);
+            } elseif ('' === $menu) {
+                delete_post_meta($post_id, 'post_menu');
+            }
+
+            if (!empty($values['topic_icon'])) {
                 update_post_meta($post_id, 'topic_icon', $values['topic_icon']);
             }
         }
