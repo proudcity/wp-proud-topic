@@ -9,7 +9,7 @@ class TopicMenu extends Core\ProudWidget
         parent::__construct(
             'topic_menu', // Base ID
             __('Topic menu', 'wp-proud-topic'), // Name
-            array( 'description' => __("Display an agency menu", 'wp-proud-topic'), ) // Args
+            array( 'description' => __("Display a topic menu", 'wp-proud-topic'), ) // Args
         );
     }
 
@@ -43,7 +43,7 @@ class TopicMenu extends Core\ProudWidget
           'menu_class' => 'nav nav-pills nav-stacked submenu',
           'fallback_cb' => false,
         );
-        if ('agency' === get_post_type()) {
+        if ('proud-topic' === get_post_type()) {
             if ($menu = get_post_meta(get_the_ID(), 'post_menu', true)) {
                 $instance['menu_class'] = new Core\ProudMenu($menu);
             }
