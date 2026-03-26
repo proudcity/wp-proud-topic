@@ -4,7 +4,7 @@
 Plugin Name: Proud Topic
 Plugin URI: http://proudcity.com/
 Description: Declares a Topic custom post type.
-Version: 2026.03.25.1632
+Version: 2026.03.25.1702
 Author: ProudCity
 Author URI: http://proudcity.com/
 License: Affero GPL v3
@@ -280,6 +280,7 @@ if (class_exists('ProudMetaBox')) {
                 '#type' => 'select',
                 '#title' => __('Menu'),
                 '#options' => [],
+                '#description' => __('If you update the menu you need to change the Submenu to match', 'wp-proud-topic'),
             ];
 
             $this->fields['topic_icon'] = [
