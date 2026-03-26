@@ -4,7 +4,7 @@
 Plugin Name: Proud Topic
 Plugin URI: http://proudcity.com/
 Description: Declares a Topic custom post type.
-Version: 2026.03.26.0644
+Version: 2026.03.26.1057
 Author: ProudCity
 Author URI: http://proudcity.com/
 License: Affero GPL v3
