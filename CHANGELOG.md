@@ -1,5 +1,12 @@
 ## 2026-03-26
 
+### Fix undefined $key property warning in TopicSection
+References: https://github.com/proudcity/wp-proudcity/issues/2665
+
+- `wp-proud-topic.php` — fixed `TopicSection::register_box()` to use literal `'topic_section'` instead of `$this->key`; parent `ProudMetaBox::$key` is `private` and inaccessible from child classes
+
+## 2026-03-26
+
 ### Auto-register Topic Menu widget on plugin activation
 References: https://github.com/proudcity/wp-proudcity/issues/2665
 

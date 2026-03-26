@@ -4,7 +4,7 @@
 Plugin Name: Proud Topic
 Plugin URI: http://proudcity.com/
 Description: Declares a Topic custom post type.
-Version: 2026.03.26.0641
+Version: 2026.03.26.0644
 Author: ProudCity
 Author URI: http://proudcity.com/
 License: Affero GPL v3
@@ -262,7 +262,7 @@ if (class_exists('ProudMetaBox')) {
         public function register_box()
         {
             $this->set_fields(false);
-            $this->form = new \Proud\Core\FormHelper($this->key, $this->fields, 1, 'form');
+            $this->form = new \Proud\Core\FormHelper('topic_section', $this->fields, 1, 'form');
             add_action('edit_form_after_title', [$this, 'render_above_editor'], 1);
         }
 
