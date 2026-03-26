@@ -4,7 +4,7 @@
 Plugin Name: Proud Topic
 Plugin URI: http://proudcity.com/
 Description: Declares a Topic custom post type.
-Version: 2026.03.25.1703
+Version: 2026.03.26.0641
 Author: ProudCity
 Author URI: http://proudcity.com/
 License: Affero GPL v3
@@ -191,7 +191,41 @@ class Proud_Topic extends \ProudPlugin
     {
         $this->create_topic();
         flush_rewrite_rules();
+        $this->add_topic_menu_to_sidebar();
     } // activate
+
+    /**
+     * Adds the TopicMenu widget to the sidebar-proud-topic sidebar on activation,
+     * skipping if a topic_menu widget is already present.
+     */
+    private function add_topic_menu_to_sidebar()
+    {
+        $sidebar_id = 'sidebar-proud-topic';
+
+        $sidebars_widgets = get_option('sidebars_widgets', []);
+
+        // Skip if the widget is already in the sidebar.
+        if (!empty($sidebars_widgets[$sidebar_id])) {
+            foreach ($sidebars_widgets[$sidebar_id] as $widget_id) {
+                if (strpos($widget_id, 'topic_menu-') === 0) {
+                    return;
+                }
+            }
+        }
+
+        // Find the next unused instance number (WordPress convention starts at 2).
+        $instances = get_option('widget_topic_menu', ['_multiwidget' => 1]);
+        $num = 2;
+        while (isset($instances[$num])) {
+            $num++;
+        }
+        $instances[$num] = [];
+        update_option('widget_topic_menu', $instances);
+
+        // Append to the sidebar.
+        $sidebars_widgets[$sidebar_id][] = 'topic_menu-' . $num;
+        update_option('sidebars_widgets', $sidebars_widgets);
+    }
 
 } // class
 $Proud_Topic = new Proud_Topic();

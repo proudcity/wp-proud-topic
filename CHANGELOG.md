@@ -1,3 +1,10 @@
+## 2026-03-26
+
+### Auto-register Topic Menu widget on plugin activation
+References: https://github.com/proudcity/wp-proudcity/issues/2665
+
+- `wp-proud-topic.php` — added `add_topic_menu_to_sidebar()` private method; called from `activate()` to automatically place the TopicMenu widget into the `sidebar-proud-topic` sidebar on plugin activation, skipping if already present
+
 ## 2026-03-25
 
 ### Topic subpage sidebar/breadcrumb support
