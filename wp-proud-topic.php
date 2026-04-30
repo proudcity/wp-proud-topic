@@ -4,7 +4,7 @@
 Plugin Name: Proud Topic
 Plugin URI: http://proudcity.com/
 Description: Declares a Topic custom post type.
-Version: 2026.03.26.1057
+Version: 2026.04.30.1510
 Author: ProudCity
 Author URI: http://proudcity.com/
 License: Affero GPL v3
@@ -35,6 +35,7 @@ class Proud_Topic extends \ProudPlugin
         ));
 
         add_action('init', array( $this, 'create_topic' ));
+        add_action( 'init', array( $this, 'maybe_flush_rewrite_rules' ), 99 );
         add_filter('option_siteorigin_panels_settings', array( $this, 'enable_panels_for_topic' ));
         add_filter('siteorigin_panels_settings', array( $this, 'load_on_attach_for_new_topic' ));
         add_action('wp_insert_post', array( $this, 'set_default_panels_data' ), 10, 3);
@@ -183,14 +184,28 @@ class Proud_Topic extends \ProudPlugin
     }
 
     /**
+     * Deferred rewrite rule flush: runs late on init (priority 99) so all plugins
+     * have already registered their CPTs and rewrite rules before we flush.
+     * Calling flush_rewrite_rules() inside activate() would fire before other
+     * plugins' init callbacks, producing an incomplete rules set.
+     *
+     * @action init
+     */
+    public function maybe_flush_rewrite_rules() {
+        if ( get_option( 'wp_proud_topic_flush_needed' ) ) {
+            flush_rewrite_rules();
+            delete_option( 'wp_proud_topic_flush_needed' );
+        }
+    }
+
+    /**
      * Fired when plugin is activated
      *
      * @param   bool    $network_wide   TRUE if WPMU 'super admin' uses Network Activate option
      */
     public function activate($network_wide)
     {
-        $this->create_topic();
-        flush_rewrite_rules();
+        update_option( 'wp_proud_topic_flush_needed', 1 );
         $this->add_topic_menu_to_sidebar();
     } // activate
 

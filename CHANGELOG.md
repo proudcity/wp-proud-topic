@@ -1,3 +1,10 @@
+## 2026-04-30
+
+### Defer flush_rewrite_rules to init to fix Topic CPT 404s after activation
+References: https://github.com/proudcity/wp-proudcity/issues/2816
+
+- `wp-proud-topic.php` — replaced direct `flush_rewrite_rules()` call in `activate()` with a flag-based deferred flush; added `maybe_flush_rewrite_rules()` hooked to `init` at priority 99 to perform the flush after all CPTs are registered
+
 ## 2026-03-26
 
 ### Fix undefined $key property warning in TopicSection
