@@ -1,3 +1,10 @@
+## 2026.09.16.1356
+
+- Fixed a stored XSS in the topic contact widget, a verbatim copy of the one closed in wp-proud-agency (#2933). `TopicContact::hasContent()` validated `name_link` with `filter_var( $v, FILTER_VALIDATE_EMAIL )`, which accepts RFC quoted local parts — so `"><img/src/onerror=alert(1)>"@a.com` passed validation, was concatenated into `"mailto:$v"`, and printed unescaped by `widgets/templates/topic-contact.php`. Now uses `sanitize_email()` + `is_email()`, with `esc_url()` at the template output.
+- The phone/email half of that fix carried over automatically: `topic-contact.php` calls `Proud\Agency\AgencyContact::phone_tel_links()` and `::email_mailto_links()`, both hardened in wp-proud-agency this release.
+
+References: https://github.com/proudcity/wp-proudcity/issues/2933
+
 ## 2026-04-30
 
 ### Defer flush_rewrite_rules to init to fix Topic CPT 404s after activation

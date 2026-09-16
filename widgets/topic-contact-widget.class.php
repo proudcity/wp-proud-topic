@@ -30,7 +30,14 @@ class TopicContact extends Core\ProudWidget {
     $instance['name'] = get_post_meta( $id, 'name', true );
     $instance['name_title'] = get_post_meta( $id, 'name_title', true );
     $instance['name_link'] = get_post_meta( $id, 'name_link', true );
-    $instance['name_link'] = filter_var($instance['name_link'], FILTER_VALIDATE_EMAIL) ? "mailto:$instance[name_link]": esc_url( $instance['name_link'] );
+    // filter_var(FILTER_VALIDATE_EMAIL) accepts RFC quoted local parts, so a
+    // payload like '"><img/src/onerror=alert(1)>"@a.com' validates as an email
+    // and used to be concatenated into a mailto: and printed unescaped.
+    // Mirrors the fix in wp-proud-agency's AgencyContact (#2933).
+    $email = sanitize_email( $instance['name_link'] );
+    $instance['name_link'] = ( !empty( $email ) && is_email( $email ) )
+        ? esc_url( 'mailto:' . $email )
+        : esc_url( $instance['name_link'] );
     $instance['email'] = get_post_meta( $id, 'email', true );
     $instance['phone'] = get_post_meta( $id, 'phone', true );
     $instance['fax'] = get_post_meta( $id, 'fax', true );
