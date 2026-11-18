@@ -1,7 +1,8 @@
-## 2026.11.18.1156
+## 2026.11.18.1200
 
 - New topics' Submenu ("In this section") now uses the topic's own menu. The template's hard-coded `homelessness` menu is now empty, and `TopicSection::save_meta()` points Submenu widgets at the topic's menu when they are empty, `homelessness`, or still on the topic's previous menu. Submenus staff pointed at a different menu are left alone.
 - A topic title that matches an existing menu name no longer triggers a PHP warning; an admin notice is shown and no menu is set.
+- A menu is no longer deleted automatically when a topic is permanently deleted (the old code passed an array to `wp_delete_nav_menu()` and never worked). If the topic created its menu (new `post_menu_created` meta), an admin notice asks whether to delete it, with a nonce-protected Delete menu link and a Keep menu link. Topics that only selected an existing menu, and topics created before this release, are never prompted.
 - Updated the Menu field description to match.
 
 References: https://github.com/proudcity/wp-proudcity/issues/3029
