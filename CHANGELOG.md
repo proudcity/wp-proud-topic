@@ -1,3 +1,11 @@
+## 2026.11.18.1156
+
+- New topics' Submenu ("In this section") now uses the topic's own menu. The template's hard-coded `homelessness` menu is now empty, and `TopicSection::save_meta()` points Submenu widgets at the topic's menu when they are empty, `homelessness`, or still on the topic's previous menu. Submenus staff pointed at a different menu are left alone.
+- A topic title that matches an existing menu name no longer triggers a PHP warning; an admin notice is shown and no menu is set.
+- Updated the Menu field description to match.
+
+References: https://github.com/proudcity/wp-proudcity/issues/3029
+
 ## 2026.09.16.1356
 
 - Fixed a stored XSS in the topic contact widget, a verbatim copy of the one closed in wp-proud-agency (#2933). `TopicContact::hasContent()` validated `name_link` with `filter_var( $v, FILTER_VALIDATE_EMAIL )`, which accepts RFC quoted local parts — so `"><img/src/onerror=alert(1)>"@a.com` passed validation, was concatenated into `"mailto:$v"`, and printed unescaped by `widgets/templates/topic-contact.php`. Now uses `sanitize_email()` + `is_email()`, with `esc_url()` at the template output.

@@ -4,7 +4,7 @@
 Plugin Name: Proud Topic
 Plugin URI: http://proudcity.com/
 Description: Declares a Topic custom post type.
-Version: 2026.09.16.1356
+Version: 2026.11.18.1156
 Author: ProudCity
 Author URI: http://proudcity.com/
 License: Affero GPL v3
@@ -269,6 +269,20 @@ if (class_exists('ProudMetaBox')) {
                 'normal',  // position
                 'high' // priority
             );
+            add_action('admin_notices', [$this, 'menu_notice']);
+        }
+
+        /**
+         * Shows the notice stored when the topic's menu could not be created.
+         */
+        public function menu_notice()
+        {
+            $key = 'proud_topic_menu_notice_' . get_current_user_id();
+            $message = get_transient($key);
+            if ($message) {
+                delete_transient($key);
+                echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html($message) . '</p></div>';
+            }
         }
 
         /**
@@ -329,7 +343,7 @@ if (class_exists('ProudMetaBox')) {
                 '#type' => 'select',
                 '#title' => __('Menu'),
                 '#options' => [],
-                '#description' => __('If you update the menu you need to change the Submenu to match', 'wp-proud-topic'),
+                '#description' => __('The Submenu ("In this section") follows this menu automatically unless you have picked a different menu in the Submenu widget.', 'wp-proud-topic'),
             ];
 
             $this->fields['topic_icon'] = [
@@ -368,13 +382,41 @@ if (class_exists('ProudMetaBox')) {
             }
 
             $menu = isset($values['post_menu']) ? $values['post_menu'] : '';
+            $old_menu = get_post_meta($post_id, 'post_menu', true);
             if ('new' === $menu) {
                 $menuId = wp_create_nav_menu($post->post_title);
-                $objMenu = get_term_by('id', $menuId, 'nav_menu');
-                $menu = $objMenu->slug;
+                if (is_wp_error($menuId)) {
+                    $existing = (is_string($old_menu) && '' !== $old_menu) ? get_term_by('slug', $old_menu, 'nav_menu') : false;
+                    if ($existing && $existing->name === $post->post_title) {
+                        // save_meta runs twice per save; this topic's menu was created by the first run.
+                        $menu = $old_menu;
+                    } else {
+                        set_transient(
+                            'proud_topic_menu_notice_' . get_current_user_id(),
+                            sprintf(
+                                /* translators: %s: topic title */
+                                __('A menu named "%s" already exists, so no menu was created for this topic. Rename the topic or choose the existing menu in the Menu field.', 'wp-proud-topic'),
+                                $post->post_title
+                            ),
+                            5 * MINUTE_IN_SECONDS
+                        );
+                        $menu = null;
+                    }
+                } else {
+                    $objMenu = get_term_by('id', $menuId, 'nav_menu');
+                    $menu = $objMenu ? $objMenu->slug : null;
+                }
             }
             if (!empty($menu) && !is_array($menu)) {
                 update_post_meta($post_id, 'post_menu', $menu);
+
+                $panels_data = get_post_meta($post_id, 'panels_data', true);
+                if (is_array($panels_data)) {
+                    list($panels_data, $changed) = topic_sync_submenu($panels_data, $menu, array('', 'homelessness', $old_menu));
+                    if ($changed) {
+                        update_post_meta($post_id, 'panels_data', wp_slash($panels_data));
+                    }
+                }
             } elseif ('' === $menu) {
                 delete_post_meta($post_id, 'post_menu');
             }
@@ -388,6 +430,33 @@ if (class_exists('ProudMetaBox')) {
     if (is_admin()) {
         new TopicSection();
     }
+}
+
+/**
+ * Points Submenu widgets in a panels_data array at a topic's menu, but only
+ * when the widget has not been customized (its menu_id is in $replaceable).
+ *
+ * @param  array  $panels_data SiteOrigin panels_data.
+ * @param  string $menu        Menu slug to set.
+ * @param  array  $replaceable menu_id values that count as "not customized".
+ * @return array               array( $panels_data, $changed )
+ */
+function topic_sync_submenu($panels_data, $menu, $replaceable)
+{
+    $changed = false;
+    if (!empty($panels_data['widgets']) && is_array($panels_data['widgets'])) {
+        foreach ($panels_data['widgets'] as $i => $widget) {
+            if (!isset($widget['panels_info']['class']) || 'Submenu' !== $widget['panels_info']['class']) {
+                continue;
+            }
+            $current = isset($widget['menu_id']) ? $widget['menu_id'] : '';
+            if ($current !== $menu && in_array($current, $replaceable, true)) {
+                $panels_data['widgets'][$i]['menu_id'] = $menu;
+                $changed = true;
+            }
+        }
+    }
+    return array($panels_data, $changed);
 }
 
 /**
