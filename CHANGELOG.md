@@ -1,4 +1,4 @@
-## 2026.11.18.1200
+## 2026.11.18.1220
 
 - New topics' Submenu ("In this section") now uses the topic's own menu. The template's hard-coded `homelessness` menu is now empty, and `TopicSection::save_meta()` points Submenu widgets at the topic's menu when they are empty, `homelessness`, or still on the topic's previous menu. Submenus staff pointed at a different menu are left alone.
 - A topic title that matches an existing menu name no longer triggers a PHP warning; an admin notice is shown and no menu is set.
