@@ -180,13 +180,16 @@ class Proud_Topic extends \ProudPlugin
     /**
      * When a topic that created its own menu is permanently deleted, queue the
      * menu so staff can be asked before it is deleted (see menu_delete_notice()).
-     * Topics without the post_menu_created flag are ignored, so a menu the topic
+     * Topics without the _proud_topic_menu_created flag are ignored, so a menu the topic
      * merely selected is never offered for deletion.
      */
     public function delete_topic_menu($post_id)
     {
+        if (get_post_type($post_id) !== 'proud-topic') {
+            return;
+        }
         $slug = get_post_meta($post_id, 'post_menu', true);
-        if (empty($slug) || !is_string($slug) || get_post_meta($post_id, 'post_menu_created', true) !== $slug) {
+        if (empty($slug) || !is_string($slug) || get_post_meta($post_id, '_proud_topic_menu_created', true) !== $slug) {
             return;
         }
         $term = get_term_by('slug', $slug, 'nav_menu');
@@ -220,8 +223,8 @@ class Proud_Topic extends \ProudPlugin
         }
         foreach ($queue as $item) {
             $term_id = absint($item['term_id']);
-            $delete_url = wp_nonce_url(admin_url('admin-post.php?action=proud_topic_delete_menu&term_id=' . $term_id), 'proud_topic_menu_' . $term_id);
-            $dismiss_url = wp_nonce_url(admin_url('admin-post.php?action=proud_topic_dismiss_menu&term_id=' . $term_id), 'proud_topic_menu_' . $term_id);
+            $delete_url = wp_nonce_url(admin_url('admin-post.php?action=proud_topic_delete_menu&term_id=' . $term_id), 'proud_topic_delete_menu_' . $term_id);
+            $dismiss_url = wp_nonce_url(admin_url('admin-post.php?action=proud_topic_dismiss_menu&term_id=' . $term_id), 'proud_topic_dismiss_menu_' . $term_id);
             echo '<div class="notice notice-warning"><p>';
             printf(
                 /* translators: %s: menu name */
@@ -239,7 +242,7 @@ class Proud_Topic extends \ProudPlugin
      */
     public function handle_delete_menu()
     {
-        $term_id = $this->menu_action_term_id();
+        $term_id = $this->menu_action_term_id('proud_topic_delete_menu');
         $term = get_term($term_id, 'nav_menu');
         $result = 'dismissed';
         if ($term && !is_wp_error($term) && 'nav_menu' === $term->taxonomy && true === wp_delete_nav_menu($term_id)) {
@@ -253,17 +256,17 @@ class Proud_Topic extends \ProudPlugin
      */
     public function handle_dismiss_menu()
     {
-        $term_id = $this->menu_action_term_id();
+        $term_id = $this->menu_action_term_id('proud_topic_dismiss_menu');
         $this->menu_action_redirect($term_id, 'dismissed');
     }
 
-    private function menu_action_term_id()
+    private function menu_action_term_id($action)
     {
         $term_id = isset($_GET['term_id']) ? absint($_GET['term_id']) : 0;
         if (!current_user_can('edit_theme_options')) {
             wp_die(esc_html__('You do not have permission to do that.', 'wp-proud-topic'), '', ['response' => 403]);
         }
-        check_admin_referer('proud_topic_menu_' . $term_id);
+        check_admin_referer($action . '_' . $term_id);
         return $term_id;
     }
 
@@ -514,9 +517,9 @@ if (class_exists('ProudMetaBox')) {
             if (!empty($menu) && !is_array($menu)) {
                 update_post_meta($post_id, 'post_menu', $menu);
                 if ($created) {
-                    update_post_meta($post_id, 'post_menu_created', $menu);
+                    update_post_meta($post_id, '_proud_topic_menu_created', $menu);
                 } elseif ($menu !== $old_menu) {
-                    delete_post_meta($post_id, 'post_menu_created');
+                    delete_post_meta($post_id, '_proud_topic_menu_created');
                 }
 
                 $panels_data = get_post_meta($post_id, 'panels_data', true);
@@ -528,7 +531,7 @@ if (class_exists('ProudMetaBox')) {
                 }
             } elseif ('' === $menu) {
                 delete_post_meta($post_id, 'post_menu');
-                delete_post_meta($post_id, 'post_menu_created');
+                delete_post_meta($post_id, '_proud_topic_menu_created');
             }
 
             if (!empty($values['topic_icon'])) {
